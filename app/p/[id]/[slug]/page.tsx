@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { CopyButton } from "../../../../components/copy-button";
-import { getJSON, type OffersResponse, type ProductResponse, withContext } from "../../../../lib/api";
+import { getJSON, type Coverage, type OffersResponse, type ProductResponse, withContext } from "../../../../lib/api";
 import { moneyText, stockLabel, when } from "../../../../lib/labels";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export default async function ProductPage({
   if (slug !== product.data.product.slug) permanentRedirect(withContext(`/p/${id}/${product.data.product.slug}`, query));
   const quantity = query.quantity || "";
   const offers = await getJSON<OffersResponse>(`/api/v1/products/${encodeURIComponent(id)}/offers?quantity=${encodeURIComponent(quantity)}&country=${encodeURIComponent(query.country || "")}`);
+  const coverage = await getJSON<Coverage>("/api/v1/coverage");
   const item = product.data.product;
   const rows = offers.ok ? offers.data.offers : [];
 
@@ -40,7 +41,12 @@ export default async function ProductPage({
             <dt>Lifecycle</dt><dd>{item.lifecycle || "Unknown"}</dd>
             <dt>Category</dt><dd>{item.category || "Uncategorised"}</dd>
             {item.gtin && <><dt>GTIN</dt><dd className="mpn">{item.gtin}</dd></>}
+            <dt>Datasheet</dt><dd>Not in the record</dd>
+            <dt>Picture</dt><dd>Not in the record</dd>
+            <dt>Published from</dt><dd>{product.data.sources?.length ? product.data.sources.join(", ") : "No public offer"}</dd>
           </dl>
+          <p>{item.description || "No reference text is stored for this part yet."}</p>
+          {coverage.ok && <CoverageNote coverage={coverage.data} />}
         </section>
         <section className="panel">
           <h2>This comparison</h2>
@@ -62,6 +68,19 @@ export default async function ProductPage({
       <Offers rows={rows} />
       {offers.ok && <p className="muted">{offers.data.currency_note}</p>}
     </main>
+  );
+}
+
+function CoverageNote({ coverage }: { coverage: Coverage }) {
+  const parse = coverage.parse.filter((source) => source.enabled).map((source) => source.name);
+  const discover = coverage.discover.filter((source) => source.enabled).map((source) => source.name);
+  return (
+    <p className="muted">
+      Parser slots on: {parse.length ? parse.join(", ") : "none"}. Web discovery on: {discover.length ? discover.join(", ") : "none"}.
+      {" "}Sly {coverage.sly.enabled ? `limit ${coverage.sly.daily_limit} a day` : "is off"}.
+      {" "}Codex {coverage.codex.enabled ? `limit ${coverage.codex.daily_limit} a day` : "is off"}.
+      {" "}Pictures {coverage.images.enabled ? `limit ${coverage.images.daily_limit} a day` : "are off"}.
+    </p>
   );
 }
 

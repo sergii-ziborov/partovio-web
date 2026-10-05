@@ -28,3 +28,16 @@ export const posts: Post[] = [
 export function findPost(slug: string): Post | undefined {
   return posts.find((post) => post.slug === slug);
 }
+
+export async function loadPosts(): Promise<Post[]> {
+  const base = process.env.PARTOVIO_API_BASE || "http://127.0.0.1:8080";
+  try {
+    const response = await fetch(new URL("/api/v1/posts", base), { cache: "no-store", signal: AbortSignal.timeout(4000) });
+    if (!response.ok) return posts;
+    const body = (await response.json()) as { posts?: Post[] };
+    if (!body.posts?.length) return posts;
+    return body.posts;
+  } catch {
+    return posts;
+  }
+}

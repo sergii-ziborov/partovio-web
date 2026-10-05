@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { posts } from "../../lib/posts";
+import { loadPosts } from "../../lib/posts";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Blog" };
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const posts = await loadPosts();
   return (
     <main className="wrap">
       <h1>Latest from the blog</h1>

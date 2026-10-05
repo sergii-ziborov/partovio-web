@@ -15,7 +15,7 @@ export function Header() {
           Partovio
         </Link>
         <nav className="nav" aria-label="Primary">
-          <Link href="/search">Search</Link>
+          <Link href="/">Search</Link>
           <Link href="/catalog">Categories</Link>
           <Link href="/brands">Brands</Link>
           <Link href="/blog">Blog</Link>
@@ -44,6 +44,7 @@ export function Footer() {
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/contact">Contact</Link>
+          <Link href="/admin">Admin</Link>
         </nav>
         <span className="muted">Find the part. Compare the options.</span>
       </div>
@@ -51,10 +52,28 @@ export function Footer() {
   );
 }
 
-export function SearchForm({ initial = "", large = false }: { initial?: string; large?: boolean }) {
+export function SearchForm({
+  initial = "",
+  large = false,
+  category = "",
+  manufacturer = "",
+  country = "",
+  currency = "",
+}: {
+  initial?: string;
+  large?: boolean;
+  category?: string;
+  manufacturer?: string;
+  country?: string;
+  currency?: string;
+}) {
   return (
-    <form className="search" action="/search" method="get" role="search">
+    <form className="search" action="/" method="get" role="search">
       <label className="skip" htmlFor={large ? "home-q" : "q"}>Part number, model, or name</label>
+      {category && <input type="hidden" name="category" value={category} />}
+      {manufacturer && <input type="hidden" name="manufacturer" value={manufacturer} />}
+      {country && <input type="hidden" name="country" value={country} />}
+      {currency && <input type="hidden" name="currency" value={currency} />}
       <input
         id={large ? "home-q" : "q"}
         name="q"

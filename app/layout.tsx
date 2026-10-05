@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Source_Sans_3 } from "next/font/google";
+import { ViewBeacon } from "../components/view-beacon";
 import { Footer, Header } from "../components/site-frame";
 import "./globals.css";
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a className="skip" href="#content">Skip to content</a>
         <Header />
         <div id="content">{children}</div>
+        <ViewBeacon />
         <Footer />
       </body>
     </html>

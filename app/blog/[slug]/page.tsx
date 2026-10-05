@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findPost, posts } from "../../../lib/posts";
+import { loadPosts } from "../../../lib/posts";
 
-export function generateStaticParams() {
-  return posts.map((post) => ({ slug: post.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const post = findPost((await params).slug);
+  const { slug } = await params;
+  const post = (await loadPosts()).find((item) => item.slug === slug);
   return { title: post?.title || "Blog" };
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const post = findPost((await params).slug);
+  const { slug } = await params;
+  const post = (await loadPosts()).find((item) => item.slug === slug);
   if (!post) notFound();
   return (
     <main className="wrap article">

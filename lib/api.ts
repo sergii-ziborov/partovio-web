@@ -31,7 +31,19 @@ export type ProductResponse = {
     category_id: string;
     lifecycle: string;
     gtin: string;
+    description?: string;
   };
+  sources?: string[];
+};
+
+export type CoverageSource = { name: string; role: string; enabled: boolean };
+export type CoverageBudget = { enabled: boolean; daily_limit: number; connected?: boolean };
+export type Coverage = {
+  parse: CoverageSource[];
+  discover: CoverageSource[];
+  sly: CoverageBudget;
+  codex: CoverageBudget;
+  images: CoverageBudget;
 };
 
 export type Money = { status: string; currency?: string; amount?: string; per?: string };

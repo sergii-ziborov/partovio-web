@@ -15,7 +15,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
       <h1>{result.data.category.name}</h1>
       <p>{result.data.category.count} published {result.data.category.count === 1 ? "product" : "products"}.</p>
       <p className="muted">Open search and filter by this category name when you already know the part family.</p>
-      <p><Link href={`/search?category=${encodeURIComponent(result.data.category.name)}`}>Search inside {result.data.category.name}</Link></p>
+      <p><Link href={`/?category=${encodeURIComponent(result.data.category.name)}`}>Search inside {result.data.category.name}</Link></p>
     </main>
   );
 }
