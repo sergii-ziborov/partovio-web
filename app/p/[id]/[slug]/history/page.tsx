@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getJSON, type HistoryEvent, type HistoryResponse, type ProductResponse, withContext } from "../../../../../lib/api";
 import { when } from "../../../../../lib/labels";
 
@@ -17,6 +17,7 @@ export default async function HistoryPage({
   const product = await getJSON<ProductResponse>(`/api/v1/products/${encodeURIComponent(id)}`);
   if (!product.ok && product.status === 404) notFound();
   if (!product.ok) return <main className="wrap"><p className="error">The catalog is unavailable.</p></main>;
+  if (slug !== product.data.product.slug) permanentRedirect(withContext(`/p/${id}/${product.data.product.slug}/history`, query));
   const history = await getJSON<HistoryResponse>(`/api/v1/products/${encodeURIComponent(id)}/history`);
   const item = product.data.product;
   const events = history.ok ? history.data.events : [];

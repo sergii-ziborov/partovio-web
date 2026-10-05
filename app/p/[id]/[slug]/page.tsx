@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { CopyButton } from "../../../../components/copy-button";
 import { getJSON, type OffersResponse, type ProductResponse, withContext } from "../../../../lib/api";
 import { moneyText, stockLabel, when } from "../../../../lib/labels";
@@ -18,6 +18,7 @@ export default async function ProductPage({
   const product = await getJSON<ProductResponse>(`/api/v1/products/${encodeURIComponent(id)}`);
   if (!product.ok && product.status === 404) notFound();
   if (!product.ok) return <main className="wrap"><p className="error">The product page cannot reach the catalog.</p></main>;
+  if (slug !== product.data.product.slug) permanentRedirect(withContext(`/p/${id}/${product.data.product.slug}`, query));
   const quantity = query.quantity || "";
   const offers = await getJSON<OffersResponse>(`/api/v1/products/${encodeURIComponent(id)}/offers?quantity=${encodeURIComponent(quantity)}&country=${encodeURIComponent(query.country || "")}`);
   const item = product.data.product;

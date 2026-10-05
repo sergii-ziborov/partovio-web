@@ -1,11 +1,8 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { NotFoundView } from "../components/not-found-view";
+
+export const metadata: Metadata = { title: "Not found" };
 
 export default function NotFound() {
-  return (
-    <main className="wrap">
-      <h1>Not found</h1>
-      <p>This address is not a published page.</p>
-      <p><Link href="/">Back to search</Link></p>
-    </main>
-  );
+  return <NotFoundView />;
 }
