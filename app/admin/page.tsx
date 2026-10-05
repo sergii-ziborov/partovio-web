@@ -1,4 +1,4 @@
-import { loadDesk, saveDesk, signIn } from "./actions";
+import { loadDesk, saveDesk, signIn, writeReference } from "./actions";
 import { adminGate, type DeskBudget, type DeskPost, type DeskSource } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,14 @@ const errors: Record<string, string> = {
   bad_limit: "A daily limit is a whole number from 1 to 1000. An empty limit is stored as 10.",
   too_many_posts: "The blog holds at most 20 articles.",
   bad_desk: "The desk could not be read.",
+  login_required: "Codex needs a ChatGPT sign-in in Hostwatch.",
+  model_unavailable: "Codex is not ready. In Hostwatch, choose an available Luna model and leave the service on.",
+  offline: "The Hostwatch completion socket did not answer.",
+  not_connected: "Set PARTOVIO_AI_SOCKET. Codex is not connected.",
+  bad_reference: "Codex did not return a usable reference.",
+  daily_limit: "The Codex daily limit is used up.",
+  disabled: "Codex is off in this desk.",
+  not_found: "That product id is not in the catalog.",
 };
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -26,18 +34,33 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <h1>Admin</h1>
       <p className="lede note">
         Three parser slots, two web-discovery slots, and daily limits for Sly, Codex, and part pictures.
-        Turning a slot on records the choice. This build does not crawl the web and does not call those providers.
+        Turning a slot on records the choice. This page does not crawl the web, does not call Sly, and does not generate pictures.
+        A Codex reference is sent only when you ask for one part, the Codex slot is on, and the Hostwatch completion socket is connected.
         Keys stay in the server environment and are not written into this form.
         A generated picture is never shown as a manufacturer photo.
       </p>
       {params.saved === "1" && <p className="demo">Saved. The switches are recorded. Nothing was fetched.</p>}
+      {params.saved === "reference" && <p className="demo">Reference saved. It uses only the stored part record.</p>}
       {params.error && <p className="error">{errors[params.error] || "The desk was not saved."}</p>}
       {gate === "missing" && <p className="error">{errors.no_token}</p>}
       {signedOut && <SignIn />}
       {loaded?.ok === false && !signedOut && gate !== "missing" && (
         <p className="error">{loaded.status === 0 ? errors.unreachable : "The desk could not be loaded."}</p>
       )}
-      {loaded?.ok && <DeskForm desk={loaded.desk} openDemo={gate === "open"} />}
+      {loaded?.ok && (
+        <>
+          <DeskForm desk={loaded.desk} openDemo={gate === "open"} />
+          <form className="panel stack" action={writeReference}>
+            <h2>Write a reference</h2>
+            <p className="muted">One stored part. Codex sees the manufacturer, MPN, title, category, and stored description. It does not see a price, a GTIN, or a picture.</p>
+            <label className="field">
+              Product id
+              <input name="product_id" required maxLength={80} placeholder="p_…" />
+            </label>
+            <button className="primary" type="submit">Write a reference</button>
+          </form>
+        </>
+      )}
     </main>
   );
 }
@@ -107,7 +130,10 @@ function DeskForm({
       <BudgetFields
         name="codex"
         label="Codex"
-        hint="An optional second pass on the same record, with its own daily limit."
+        hint="Hostwatch runs Codex on a private completion socket. This form does not hold a key. A reference is written only from the form below, for one part, when this slot is on."
+        connectedText={desk.codex.connected
+          ? "PARTOVIO_AI_SOCKET is set. Sign-in stays in Hostwatch and is checked when you write a reference."
+          : "PARTOVIO_AI_SOCKET is empty, so a reference is refused and the budget is not spent."}
         budget={desk.codex}
       />
       <BudgetFields
@@ -163,7 +189,22 @@ function SourceFields({ prefix, index, source }: { prefix: string; index: number
   );
 }
 
-function BudgetFields({ name, label, hint, budget }: { name: string; label: string; hint: string; budget: DeskBudget }) {
+function BudgetFields({
+  name,
+  label,
+  hint,
+  budget,
+  connectedText,
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  budget: DeskBudget;
+  connectedText?: string;
+}) {
+  const presence = connectedText ?? (budget.connected
+    ? "A key is present in the server environment."
+    : "No key is set, so a reservation is refused and the budget is not spent.");
   return (
     <section className="panel">
       <h2>{label}</h2>
@@ -176,9 +217,7 @@ function BudgetFields({ name, label, hint, budget }: { name: string; label: stri
         Daily limit
         <input name={`${name}_limit`} type="number" min={1} max={1000} defaultValue={budget.daily_limit || 10} />
       </label>
-      <p className="muted">
-        Used today: {budget.used_today}. {budget.connected ? "A key is present in the server environment." : "No key is set, so a reservation is refused and the budget is not spent."}
-      </p>
+      <p className="muted">Used today: {budget.used_today}. {presence}</p>
     </section>
   );
 }

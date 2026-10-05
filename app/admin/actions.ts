@@ -96,3 +96,31 @@ export async function saveDesk(formData: FormData) {
   }
   redirect("/admin?saved=1");
 }
+
+export async function writeReference(formData: FormData) {
+  if (!(await allowed())) redirect("/admin?error=unauthorized");
+  const id = String(formData.get("product_id") || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) redirect("/admin?error=bad_reference");
+  let response: Response;
+  try {
+    response = await fetch(new URL(`/api/v1/admin/parts/${encodeURIComponent(id)}/reference`, apiBase()), {
+      method: "POST",
+      headers: { authorization: `Bearer ${expectedToken()}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(110000),
+    });
+  } catch {
+    redirect("/admin?error=offline");
+  }
+  if (!response.ok) {
+    let code = "offline";
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error && /^[a-z0-9_]+$/.test(body.error)) code = body.error;
+    } catch {
+      code = "offline";
+    }
+    redirect(`/admin?error=${code}`);
+  }
+  redirect("/admin?saved=reference");
+}
