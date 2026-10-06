@@ -45,7 +45,7 @@ export default async function HistoryPage({
               <tr key={`${event.offer_id}-${index}`}>
                 <td>{when(event.observed_at)}</td>
                 <td>{event.supplier}</td>
-                <td>{event.kind === "correction" ? "Parser correction" : event.kind === "price_change" ? "Price change" : event.kind}</td>
+                <td>{kindLabel(event.kind)}</td>
                 <td>{event.amount ? `${event.amount} ${event.currency}` : "No public price"}</td>
                 <td>{event.gap_before ? "Yes" : "No"}</td>
               </tr>
@@ -70,14 +70,16 @@ function Chart({ events }: { events: HistoryEvent[] }) {
   const spanA = Math.max(0.01, maxA - minA);
   const x = (time: number) => 40 + ((time - minT) / spanT) * 560;
   const y = (amount: number) => 180 - ((amount - minA) / spanA) * 140;
-  const bySeller = new Map<string, HistoryEvent[]>();
+  const bySeries = new Map<string, HistoryEvent[]>();
   for (const event of priced) {
-    const list = bySeller.get(event.supplier) || [];
+    if (event.kind === "checked") continue;
+    const key = `${event.offer_id}|${event.currency}`;
+    const list = bySeries.get(key) || [];
     list.push(event);
-    bySeller.set(event.supplier, list);
+    bySeries.set(key, list);
   }
   const colors = ["#2563eb", "#0f7a56", "#9a6700", "#9f2d2d"];
-  const lines = [...bySeller.entries()].map(([seller, points], index) => {
+  const lines = [...bySeries.entries()].map(([series, points], index) => {
     const segments: string[][] = [[]];
     for (const point of points) {
       if (point.gap_before && segments[segments.length - 1].length > 0) segments.push([]);
@@ -85,7 +87,8 @@ function Chart({ events }: { events: HistoryEvent[] }) {
       const cy = y(Number(point.amount));
       segments[segments.length - 1].push(`${cx},${cy}`);
     }
-    return { seller, color: colors[index % colors.length], segments };
+    const sample = points[0];
+    return { seller: `${sample.supplier} ${sample.currency}`, color: colors[index % colors.length], segments };
   });
   return (
     <svg className="chart" viewBox="0 0 640 220" role="img" aria-label="Observed prices with gaps left open">
@@ -97,4 +100,21 @@ function Chart({ events }: { events: HistoryEvent[] }) {
       ))}
     </svg>
   );
+}
+
+function kindLabel(kind: string) {
+  switch (kind) {
+    case "first_seen": return "First seen";
+    case "price_changed":
+    case "price_change": return "Price change";
+    case "stock_changed": return "Stock change";
+    case "packaging_changed": return "Pack change";
+    case "shipping_changed": return "Delivery change";
+    case "reappeared": return "Back in stock";
+    case "withdrawn": return "Withdrawn";
+    case "checked": return "Checked, unchanged";
+    case "parser_correction":
+    case "correction": return "Parser correction";
+    default: return kind;
+  }
 }

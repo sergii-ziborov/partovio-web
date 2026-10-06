@@ -15,6 +15,8 @@ export type SearchResponse = {
   demo?: boolean;
   query: string;
   partial: boolean;
+  degraded?: boolean;
+  search_mode?: string;
   groups: Record<string, SearchHit[]>;
   group_order: string[];
 };
@@ -34,6 +36,7 @@ export type ProductResponse = {
     description?: string;
   };
   sources?: string[];
+  reference?: { text: string; missing?: string[]; model?: string; generated_at?: string };
 };
 
 export type CoverageSource = { name: string; role: string; enabled: boolean };
@@ -70,6 +73,7 @@ export type Offer = {
   comparable: boolean;
   observed_at: string;
   destination: string;
+  image_url?: string;
 };
 
 export type OffersResponse = {
@@ -93,6 +97,16 @@ export type HistoryEvent = {
 export type HistoryResponse = { demo?: boolean; events: HistoryEvent[]; note: string };
 
 export type Category = { id: string; name: string; count: number };
+export type ProductLink = {
+  product_id: string;
+  slug: string;
+  manufacturer: string;
+  mpn: string;
+  title: string;
+  path: string;
+};
+export type Brand = { id: string; name: string; count: number };
+export type SitemapURL = { path: string; lastmod: string };
 
 export async function getJSON<T>(path: string): Promise<{ ok: true; data: T } | { ok: false; status: number }> {
   try {

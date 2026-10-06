@@ -15,6 +15,7 @@ export function Results({
   return (
     <section className="groups">
       {result.data.demo && <p className="demo">Demo catalog. These sellers are sample data, not live distributor feeds.</p>}
+      {result.data.degraded && <p className="muted">The search index is not answering. These matches still come from the catalog held in this process.</p>}
       <p className="muted">Query kept as entered: <span className="mpn">{result.data.query}</span></p>
       {result.data.group_order.length === 0 && <p>No published product matched this query.</p>}
       {result.data.group_order.map((group) => (

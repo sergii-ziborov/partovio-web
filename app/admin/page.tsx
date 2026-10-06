@@ -105,7 +105,7 @@ function DeskForm({
       )}
       <section className="panel">
         <h2>Parser slots</h2>
-        <p className="muted">Feeds the catalog is allowed to read. A name is a label. Nothing is fetched from this page.</p>
+        <p className="muted">A local_csv path is read by the worker. Remote types stay closed without a secret reference, and a reference name is not a live connection. This page does not fetch.</p>
         <div className="admin-sources">
           {desk.parse.map((source, index) => (
             <SourceFields key={`parse-${index}`} prefix="parse" index={index} source={source} />
@@ -185,6 +185,15 @@ function SourceFields({ prefix, index, source }: { prefix: string; index: number
         <input type="checkbox" name={`${prefix}_on_${index}`} defaultChecked={source.enabled} />
         On
       </label>
+      <label className="field">
+        Type
+        <input name={`${prefix}_type_${index}`} defaultValue={source.type || ""} placeholder="local_csv" maxLength={40} />
+      </label>
+      <label className="field">
+        Path
+        <input name={`${prefix}_path_${index}`} defaultValue={source.feed_path || ""} maxLength={240} />
+      </label>
+      {source.status && <p className="muted">Status: {source.status}</p>}
     </div>
   );
 }
@@ -215,9 +224,9 @@ function BudgetFields({
       </label>
       <label className="field">
         Daily limit
-        <input name={`${name}_limit`} type="number" min={1} max={1000} defaultValue={budget.daily_limit || 10} />
+        <input name={`${name}_limit`} type="number" min={0} max={1000} defaultValue={budget.hard_stop ? 0 : (budget.daily_limit || 10)} />
       </label>
-      <p className="muted">Used today: {budget.used_today}. {presence}</p>
+      <p className="muted">Empty keeps 10. Zero is a hard stop and does not become 10. A key in the environment is not a verified connection. Used today: {budget.used_today}. {presence}</p>
     </section>
   );
 }
@@ -236,6 +245,10 @@ function PostFields({ index, post }: { index: number; post?: DeskPost }) {
       <label className="field">
         Date
         <input name={`post_date_${index}`} defaultValue={post?.date || ""} placeholder="YYYY-MM-DD" />
+      </label>
+      <label className="field">
+        Status
+        <input name={`post_status_${index}`} defaultValue={post?.status || "published"} placeholder="published, draft, or archived" />
       </label>
       <label className="field">
         Summary

@@ -34,14 +34,19 @@ function slots(formData: FormData, prefix: string, count: number) {
       name: String(formData.get(`${prefix}_name_${i}`) || "").trim(),
       role: prefix,
       enabled: formData.get(`${prefix}_on_${i}`) === "on",
+      type: String(formData.get(`${prefix}_type_${i}`) || "").trim(),
+      feed_path: String(formData.get(`${prefix}_path_${i}`) || "").trim(),
     });
   }
   return out;
 }
 
 function budget(formData: FormData, name: string) {
-  const parsed = Number.parseInt(String(formData.get(`${name}_limit`) || ""), 10);
-  return { enabled: formData.get(`${name}_on`) === "on", daily_limit: Number.isFinite(parsed) ? parsed : 0 };
+  const raw = String(formData.get(`${name}_limit`) || "").trim();
+  const enabled = formData.get(`${name}_on`) === "on";
+  if (raw === "0") return { enabled, daily_limit: 0, hard_stop: true };
+  const parsed = Number.parseInt(raw, 10);
+  return { enabled, daily_limit: Number.isFinite(parsed) && parsed > 0 ? parsed : 10, hard_stop: false };
 }
 
 function articles(formData: FormData) {
@@ -52,12 +57,13 @@ function articles(formData: FormData) {
     const title = String(formData.get(`post_title_${i}`) || "").trim();
     const summary = String(formData.get(`post_summary_${i}`) || "").trim();
     const date = String(formData.get(`post_date_${i}`) || "").trim();
+    const status = String(formData.get(`post_status_${i}`) || "").trim();
     const body = String(formData.get(`post_body_${i}`) || "")
       .split(/\n\s*\n/)
       .map((part) => part.trim())
       .filter(Boolean);
     if (!slug && !title && !summary && body.length === 0) continue;
-    posts.push({ slug, title, date, summary, body });
+    posts.push({ slug, title, date, summary, body, status });
   }
   return posts;
 }

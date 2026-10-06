@@ -1,10 +1,25 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { CopyButton } from "../../../../components/copy-button";
-import { getJSON, type Coverage, type OffersResponse, type ProductResponse, withContext } from "../../../../lib/api";
+import { getJSON, type OffersResponse, type ProductResponse, withContext } from "../../../../lib/api";
 import { moneyText, stockLabel, when } from "../../../../lib/labels";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string; slug: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getJSON<ProductResponse>(`/api/v1/products/${encodeURIComponent(id)}`);
+  if (!product.ok) return { title: "Part" };
+  const item = product.data.product;
+  const origin = process.env.PARTOVIO_PUBLIC_ORIGIN;
+  const demo = process.env.PARTOVIO_DEMO === "1";
+  return {
+    title: `${item.manufacturer} ${item.mpn}`,
+    description: item.title || undefined,
+    alternates: origin && !demo ? { canonical: `${origin}/p/${item.product_id}/${item.slug}` } : undefined,
+  };
+}
 
 export default async function ProductPage({
   params,
@@ -21,16 +36,24 @@ export default async function ProductPage({
   if (slug !== product.data.product.slug) permanentRedirect(withContext(`/p/${id}/${product.data.product.slug}`, query));
   const quantity = query.quantity || "";
   const offers = await getJSON<OffersResponse>(`/api/v1/products/${encodeURIComponent(id)}/offers?quantity=${encodeURIComponent(quantity)}&country=${encodeURIComponent(query.country || "")}`);
-  const coverage = await getJSON<Coverage>("/api/v1/coverage");
   const item = product.data.product;
   const rows = offers.ok ? offers.data.offers : [];
+  const sellers = new Set(rows.map((offer) => offer.supplier_id)).size;
+  const newest = rows.map((offer) => offer.observed_at).sort().at(-1);
+  const quotedShip = rows.filter((offer) => offer.shipping.status === "quoted").length;
+  const photo = rows.find((offer) => offer.image_url)?.image_url;
 
   return (
     <main className="wrap">
       {(product.data.demo || offers.ok && offers.data.demo) && <p className="demo">Demo catalog. Prices are sample observations, not a live market.</p>}
-      <p className="crumbs"><Link href="/">Home</Link> / <Link href="/catalog">Catalog</Link> / {item.category || "Part"}</p>
+      <p className="crumbs"><Link href="/">Home</Link> / <Link href="/catalog">Catalog</Link> / {item.category_id ? <Link href={`/catalog/${item.category_id}`}>{item.category || "Part"}</Link> : (item.category || "Part")}</p>
       <div className="product-top">
         <section className="panel">
+          {photo ? (
+            <img src={photo} alt={`${item.manufacturer} ${item.mpn}`} referrerPolicy="no-referrer" style={{ maxWidth: "160px", maxHeight: "160px", objectFit: "contain" }} />
+          ) : (
+            <p className="muted">No photograph is stored.</p>
+          )}
           <div className="row-actions">
             <h1 className="mpn">{item.mpn}</h1>
             <CopyButton value={item.mpn} />
@@ -42,11 +65,16 @@ export default async function ProductPage({
             <dt>Category</dt><dd>{item.category || "Uncategorised"}</dd>
             {item.gtin && <><dt>GTIN</dt><dd className="mpn">{item.gtin}</dd></>}
             <dt>Datasheet</dt><dd>Not in the record</dd>
-            <dt>Picture</dt><dd>Not in the record</dd>
-            <dt>Published from</dt><dd>{product.data.sources?.length ? product.data.sources.join(", ") : "No public offer"}</dd>
+            <dt>Picture</dt><dd>{photo ? "Seller file" : "Not in the record"}</dd>
+            <dt>Sellers</dt><dd>{sellers}</dd>
+            <dt>Offers</dt><dd>{rows.length}</dd>
+            <dt>Updated</dt><dd>{newest ? when(newest) : "No observation"}</dd>
+            <dt>Delivery</dt><dd>{rows.length === 0 ? "No offer" : quotedShip === rows.length ? "Quoted on every offer" : quotedShip === 0 ? "Not confirmed" : `Quoted on ${quotedShip} of ${rows.length}`}</dd>
           </dl>
-          <p>{item.description || "No reference text is stored for this part yet."}</p>
-          {coverage.ok && <CoverageNote coverage={coverage.data} />}
+          <p>{item.description || "No manufacturer description is stored for this part yet."}</p>
+          {product.data.reference?.text && (
+            <p className="muted">Reference note, not a price or a photograph: {product.data.reference.text}</p>
+          )}
         </section>
         <section className="panel">
           <h2>This comparison</h2>
@@ -68,19 +96,6 @@ export default async function ProductPage({
       <Offers rows={rows} />
       {offers.ok && <p className="muted">{offers.data.currency_note}</p>}
     </main>
-  );
-}
-
-function CoverageNote({ coverage }: { coverage: Coverage }) {
-  const parse = coverage.parse.filter((source) => source.enabled).map((source) => source.name);
-  const discover = coverage.discover.filter((source) => source.enabled).map((source) => source.name);
-  return (
-    <p className="muted">
-      Parser slots on: {parse.length ? parse.join(", ") : "none"}. Web discovery on: {discover.length ? discover.join(", ") : "none"}.
-      {" "}Sly {coverage.sly.enabled ? `limit ${coverage.sly.daily_limit} a day` : "is off"}.
-      {" "}Codex {coverage.codex.enabled ? `limit ${coverage.codex.daily_limit} a day` : "is off"}.
-      {" "}Pictures {coverage.images.enabled ? `limit ${coverage.images.daily_limit} a day` : "are off"}.
-    </p>
   );
 }
 
@@ -114,7 +129,9 @@ function Offers({ rows }: { rows: OffersResponse["offers"] }) {
             <strong>{offer.supplier}</strong>
             <div className={`stock ${offer.stock_state}`}>{stockLabel[offer.stock_state] || offer.stock_state}</div>
             <div>{moneyText(offer.goods.status, offer.goods.currency, offer.goods.amount)}</div>
-            <div className="muted">{offer.shipping.status === "quoted" ? moneyText("quoted", offer.shipping.currency, offer.shipping.amount) : "Delivery not confirmed"}</div>
+            <div className="muted">MOQ {offer.moq} · pack {offer.base_per_sales} · {offer.sales_units} {offer.sales_unit}</div>
+            <div className="muted">{when(offer.observed_at)} · {offer.ship_from ? `Ships from ${offer.ship_from}` : "Origin unknown"}</div>
+            <div className="muted">{offer.shipping.status === "quoted" ? moneyText("quoted", offer.shipping.currency, offer.shipping.amount) : "Delivery not confirmed"}{offer.country_confirmed ? "" : " · destination not confirmed"}</div>
             <a className="primary" href={offer.destination}>View</a>
           </article>
         ))}

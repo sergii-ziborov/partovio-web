@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
-export type DeskSource = { name: string; role: string; enabled: boolean };
-export type DeskBudget = { enabled: boolean; daily_limit: number; used_today: number; connected: boolean };
-export type DeskPost = { slug: string; title: string; date: string; summary: string; body: string[] };
+export type DeskSource = { name: string; role: string; enabled: boolean; type?: string; feed_path?: string; status?: string };
+export type DeskBudget = { enabled: boolean; daily_limit: number; used_today: number; connected: boolean; hard_stop?: boolean };
+export type DeskPost = { slug: string; title: string; date: string; summary: string; body: string[]; status?: string; author?: string };
 export type DeskView = { path: string; count: number };
 export type DeskState = {
   parse: DeskSource[];
