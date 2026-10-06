@@ -42,6 +42,14 @@ export default async function ProductPage({
   const newest = rows.map((offer) => offer.observed_at).sort().at(-1);
   const quotedShip = rows.filter((offer) => offer.shipping.status === "quoted").length;
   const photo = rows.find((offer) => offer.image_url)?.image_url;
+  const delivery = rows.length === 0 ? "No offer" : quotedShip === rows.length ? "Delivery quoted" : quotedShip === 0 ? "Delivery not confirmed" : `Delivery quoted on ${quotedShip} of ${rows.length}`;
+  const facts = [
+    item.category,
+    `${sellers} ${sellers === 1 ? "seller" : "sellers"}`,
+    `${rows.length} ${rows.length === 1 ? "offer" : "offers"}`,
+    newest ? `Updated ${when(newest)}` : "No observation",
+    delivery,
+  ].filter(Boolean);
 
   return (
     <main className="wrap">
@@ -49,36 +57,32 @@ export default async function ProductPage({
       <p className="crumbs"><Link href="/">Home</Link> / <Link href="/catalog">Catalog</Link> / {item.category_id ? <Link href={`/catalog/${item.category_id}`}>{item.category || "Part"}</Link> : (item.category || "Part")}</p>
       <div className="product-top">
         <section className="panel">
-          {photo ? (
-            <img src={photo} alt={`${item.manufacturer} ${item.mpn}`} referrerPolicy="no-referrer" style={{ maxWidth: "160px", maxHeight: "160px", objectFit: "contain" }} />
-          ) : (
-            <p className="muted">No photograph is stored.</p>
-          )}
-          <div className="row-actions">
-            <h1 className="mpn">{item.mpn}</h1>
-            <CopyButton value={item.mpn} />
+          <div className={photo ? "identity" : "identity identity-plain"}>
+            {photo ? (
+              <img className="part-photo" src={photo} alt={`${item.manufacturer} ${item.mpn}`} referrerPolicy="no-referrer" />
+            ) : (
+              <p className="muted photo-note">No photograph is stored.</p>
+            )}
+            <div>
+              <div className="row-actions">
+                <h1 className="mpn">{item.mpn}</h1>
+                <CopyButton value={item.mpn} />
+              </div>
+              <p>{item.manufacturer}</p>
+              <p className="muted">{item.title}</p>
+            </div>
           </div>
-          <p>{item.manufacturer}</p>
-          <p className="muted">{item.title}</p>
-          <dl className="kvs">
-            <dt>Lifecycle</dt><dd>{item.lifecycle || "Unknown"}</dd>
-            <dt>Category</dt><dd>{item.category || "Uncategorised"}</dd>
-            {item.gtin && <><dt>GTIN</dt><dd className="mpn">{item.gtin}</dd></>}
-            <dt>Datasheet</dt><dd>Not in the record</dd>
-            <dt>Picture</dt><dd>{photo ? "Seller file" : "Not in the record"}</dd>
-            <dt>Sellers</dt><dd>{sellers}</dd>
-            <dt>Offers</dt><dd>{rows.length}</dd>
-            <dt>Updated</dt><dd>{newest ? when(newest) : "No observation"}</dd>
-            <dt>Delivery</dt><dd>{rows.length === 0 ? "No offer" : quotedShip === rows.length ? "Quoted on every offer" : quotedShip === 0 ? "Not confirmed" : `Quoted on ${quotedShip} of ${rows.length}`}</dd>
-          </dl>
-          <p>{item.description || "No manufacturer description is stored for this part yet."}</p>
+          <p className="muted">{facts.join(" · ")}</p>
+          {item.gtin && <p>GTIN <span className="mpn">{item.gtin}</span></p>}
+          {item.lifecycle && item.lifecycle !== "unknown" && <p className="muted">Lifecycle {item.lifecycle}</p>}
+          {item.description && <p>{item.description}</p>}
           {product.data.reference?.text && (
             <p className="muted">Reference note, not a price or a photograph: {product.data.reference.text}</p>
           )}
         </section>
         <section className="panel">
-          <h2>This comparison</h2>
-          <p className="muted">Offers found in connected sources. This is not every seller in the world.</p>
+          <h2>Quantity</h2>
+          <p className="muted">The offers below follow this quantity. They are not every seller in the world.</p>
           <form action={`/p/${id}/${slug}`} method="get" className="controls">
             {query.country && <input type="hidden" name="country" value={query.country} />}
             {query.currency && <input type="hidden" name="currency" value={query.currency} />}

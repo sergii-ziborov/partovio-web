@@ -108,7 +108,7 @@ function DeskForm({
         <p className="muted">A local_csv path is read by the worker. Remote types stay closed without a secret reference, and a reference name is not a live connection. This page does not fetch.</p>
         <div className="admin-sources">
           {desk.parse.map((source, index) => (
-            <SourceFields key={`parse-${index}`} prefix="parse" index={index} source={source} />
+            <SourceFields key={`parse-${index}`} prefix="parse" index={index} source={source} files />
           ))}
         </div>
       </section>
@@ -174,25 +174,36 @@ function DeskForm({
   );
 }
 
-function SourceFields({ prefix, index, source }: { prefix: string; index: number; source: DeskSource }) {
+function SourceFields({ prefix, index, source, files = false }: { prefix: string; index: number; source: DeskSource; files?: boolean }) {
   return (
     <div className="admin-source">
-      <label className="field">
-        Name
-        <input name={`${prefix}_name_${index}`} defaultValue={source.name} maxLength={80} />
-      </label>
-      <label className="check">
-        <input type="checkbox" name={`${prefix}_on_${index}`} defaultChecked={source.enabled} />
-        On
-      </label>
-      <label className="field">
-        Type
-        <input name={`${prefix}_type_${index}`} defaultValue={source.type || ""} placeholder="local_csv" maxLength={40} />
-      </label>
-      <label className="field">
-        Path
-        <input name={`${prefix}_path_${index}`} defaultValue={source.feed_path || ""} maxLength={240} />
-      </label>
+      <div className="admin-source-head">
+        <label className="field">
+          Name
+          <input name={`${prefix}_name_${index}`} defaultValue={source.name} maxLength={80} />
+        </label>
+        <label className="check">
+          <input type="checkbox" name={`${prefix}_on_${index}`} defaultChecked={source.enabled} />
+          On
+        </label>
+      </div>
+      {files ? (
+        <>
+          <label className="field">
+            Type
+            <input name={`${prefix}_type_${index}`} defaultValue={source.type || ""} placeholder="local_csv" maxLength={40} />
+          </label>
+          <label className="field">
+            Path
+            <input name={`${prefix}_path_${index}`} defaultValue={source.feed_path || ""} maxLength={240} />
+          </label>
+        </>
+      ) : (
+        <>
+          <input type="hidden" name={`${prefix}_type_${index}`} value={source.type || ""} />
+          <input type="hidden" name={`${prefix}_path_${index}`} value={source.feed_path || ""} />
+        </>
+      )}
       {source.status && <p className="muted">Status: {source.status}</p>}
     </div>
   );

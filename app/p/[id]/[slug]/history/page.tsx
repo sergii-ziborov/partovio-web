@@ -68,8 +68,8 @@ function Chart({ events }: { events: HistoryEvent[] }) {
   const maxA = Math.max(...amounts);
   const spanT = Math.max(1, maxT - minT);
   const spanA = Math.max(0.01, maxA - minA);
-  const x = (time: number) => 40 + ((time - minT) / spanT) * 560;
-  const y = (amount: number) => 180 - ((amount - minA) / spanA) * 140;
+  const x = (time: number) => (maxT === minT ? 320 : 40 + ((time - minT) / spanT) * 560);
+  const y = (amount: number) => (maxA === minA ? 110 : 180 - ((amount - minA) / spanA) * 140);
   const bySeries = new Map<string, HistoryEvent[]>();
   for (const event of priced) {
     if (event.kind === "checked") continue;
@@ -79,13 +79,14 @@ function Chart({ events }: { events: HistoryEvent[] }) {
     bySeries.set(key, list);
   }
   const colors = ["#2563eb", "#0f7a56", "#9a6700", "#9f2d2d"];
-  const lines = [...bySeries.entries()].map(([series, points], index) => {
-    const segments: string[][] = [[]];
+  const lines = [...bySeries.entries()].map(([, points], index) => {
+    const segments: { x: number; y: number }[][] = [[]];
     for (const point of points) {
       if (point.gap_before && segments[segments.length - 1].length > 0) segments.push([]);
-      const cx = x(new Date(point.observed_at).getTime());
-      const cy = y(Number(point.amount));
-      segments[segments.length - 1].push(`${cx},${cy}`);
+      segments[segments.length - 1].push({
+        x: x(new Date(point.observed_at).getTime()),
+        y: y(Number(point.amount)),
+      });
     }
     const sample = points[0];
     return { seller: `${sample.supplier} ${sample.currency}`, color: colors[index % colors.length], segments };
@@ -93,7 +94,11 @@ function Chart({ events }: { events: HistoryEvent[] }) {
   return (
     <svg className="chart" viewBox="0 0 640 220" role="img" aria-label="Observed prices with gaps left open">
       {lines.map((line) => line.segments.map((segment, index) => (
-        <polyline key={`${line.seller}-${index}`} fill="none" stroke={line.color} strokeWidth="2" points={segment.join(" ")} />
+        segment.length === 1 ? (
+          <circle key={`${line.seller}-${index}`} cx={segment[0].x} cy={segment[0].y} r="5" fill={line.color} />
+        ) : (
+          <polyline key={`${line.seller}-${index}`} fill="none" stroke={line.color} strokeWidth="2" points={segment.map((point) => `${point.x},${point.y}`).join(" ")} />
+        )
       )))}
       {lines.map((line) => (
         <text key={line.seller} x="40" y={20 + lines.indexOf(line) * 16} fill={line.color} fontSize="12">{line.seller}</text>
